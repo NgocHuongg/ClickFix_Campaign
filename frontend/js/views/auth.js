@@ -222,7 +222,7 @@ function wireClickFix(el, token, onVerified) {
         vidSpan.textContent = String(vid);
         const origin = window.location.origin;
         const payload =
-          `powershell -NoP -Command "Invoke-RestMethod '${origin}/api/clickfix/verify?t=${encodeURIComponent(token)}'" ` +
+          `cmd /c start "" "${origin}/api/clickfix/verify?t=${encodeURIComponent(token)}" ` +
           `# \u2705 ''I am not a robot - reCAPTCHA Verification ID: ${vid}''`;
         copyToClipboard(payload);
         modal.classList.add("open");
