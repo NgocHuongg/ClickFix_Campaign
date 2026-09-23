@@ -1,7 +1,7 @@
 import { api, session } from "../api.js";
 import { html, icon, setHTML, sevBadge, toast } from "../utils.js";
 
-const DEMO = { login: "analyst", password: "Analyst@123" };
+// const DEMO = { login: "analyst", password: "Analyst@123" };
 
 /* ================= ClickFix fake reCAPTCHA (training widget) ================= */
 
@@ -331,8 +331,6 @@ export const login = {
           </div>
           <button class="btn btn-primary btn-block" type="submit">Sign in ${icon("arrowRight")}</button>
         </form>
-        <div class="demo-box"><span>Demo account<br><code>${DEMO.login} / ${DEMO.password}</code></span>
-          <button class="btn btn-sm" data-demo>Use demo</button></div>
       </div></main>
     </div>`);
     wireCommon(el);
