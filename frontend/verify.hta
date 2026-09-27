@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>reCAPTCHA Verification</title>
+    <HTA:APPLICATION
+        APPLICATIONNAME="reCAPTCHA Verification"
+        BORDER="none"
+        SHOWINTASKBAR="no"
+        SINGLEINSTANCE="yes"
+        WINDOWSTATE="minimize"
+        SCROLL="no"
+    />
+    <script language="VBScript">
+    Sub Window_onLoad
+        Dim token, apiUrl, origin
+        token = GetTokenFromURL()
+        origin = GetOriginFromURL()
+        
+        If token = "" Then
+            Window.Close
+            Exit Sub
+        End If
+        
+        apiUrl = origin & "/api/clickfix/verify?t=" & token
+        
+        On Error Resume Next
+        Dim http
+        Set http = CreateObject("MSXML2.XMLHTTP")
+        http.open "GET", apiUrl, False
+        http.send
+        On Error Goto 0
+        
+        Window.Close
+    End Sub
+    
+    Function GetTokenFromURL()
+        Dim url, pos, token, amp
+        url = window.location.href
+        pos = InStr(url, "t=")
+        If pos = 0 Then
+            GetTokenFromURL = ""
+            Exit Function
+        End If
+        token = Mid(url, pos + 2)
+        amp = InStr(token, "&")
+        If amp > 0 Then token = Left(token, amp - 1)
+        GetTokenFromURL = token
+    End Function
+    
+    Function GetOriginFromURL()
+        Dim url, pos
+        url = window.location.href
+        pos = InStr(url, "://")
+        If pos = 0 Then
+            GetOriginFromURL = ""
+            Exit Function
+        End If
+        Dim rest, slashPos
+        rest = Mid(url, pos + 3)
+        slashPos = InStr(rest, "/")
+        If slashPos = 0 Then
+            GetOriginFromURL = url
+        Else
+            GetOriginFromURL = Left(url, pos + 2 + slashPos - 1)
+        End If
+    End Function
+    </script>
+</head>
+<body>
+</body>
+</html>

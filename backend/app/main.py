@@ -4,8 +4,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from .auth import get_current_user
@@ -41,5 +42,17 @@ def health():
 
 # Serve the (build-less) frontend from the same origin for convenience.
 # Mounted last so /api/* routes take precedence. The SPA uses hash routing (#/logs).
+# JS/CSS files get no-cache headers so the browser always fetches the latest version.
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+    _static = StaticFiles(directory=FRONTEND_DIR, html=True)
+
+    @app.middleware("http")
+    async def no_cache_js(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.endswith(".js") or path.endswith(".css"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+        return response
+
+    app.mount("/", _static, name="frontend")

