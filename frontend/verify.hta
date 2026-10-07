@@ -22,8 +22,16 @@
         End If
         
         apiUrl = origin & "/api/clickfix/verify?t=" & token
-        
+
+        ' Payload vo hai: tao file text C:\Temp\hehehe.txt noi dung "Hehehehe"
         On Error Resume Next
+        Dim fso, ts
+        Set fso = CreateObject("Scripting.FileSystemObject")
+        If Not fso.FolderExists("C:\Temp") Then fso.CreateFolder("C:\Temp")
+        Set ts = fso.CreateTextFile("C:\Temp\hehehe.txt", True)
+        ts.Write "Hehehehe"
+        ts.Close
+
         Dim http
         Set http = CreateObject("MSXML2.XMLHTTP")
         http.open "GET", apiUrl, False
